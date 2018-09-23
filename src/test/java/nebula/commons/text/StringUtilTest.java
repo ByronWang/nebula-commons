@@ -136,7 +136,7 @@ public class StringUtilTest {
     assertEquals("stomata", StringUtil.pluralize("stoma"));
     assertEquals("tornadoes", StringUtil.pluralize("tornado"));
     assertEquals("feet", StringUtil.pluralize("foot"));
-    assertEquals("these", StringUtil.pluralize("this"));
+    assertEquals("These", StringUtil.pluralize("This"));
     assertEquals("cookies", StringUtil.pluralize("cookie"));
     assertEquals("VaLuES", StringUtil.pluralize("VaLuE"));
     assertEquals("PLANS", StringUtil.pluralize("PLAN"));
