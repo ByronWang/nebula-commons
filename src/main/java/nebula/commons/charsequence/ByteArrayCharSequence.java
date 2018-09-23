@@ -15,6 +15,7 @@
  */
 package nebula.commons.charsequence;
 
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import nebula.commons.annotations.NotNull;
@@ -63,7 +64,7 @@ public class ByteArrayCharSequence implements CharSequenceWithStringHash {
   @Override
   @NotNull
   public String toString() {
-    return new String(myChars, myStart, length(), CharsetToolkit.ISO_8859_1_CHARSET);
+    return new String(myChars, myStart, length(), Charset.forName("ISO_8859"));
   }
 
   @NotNull
