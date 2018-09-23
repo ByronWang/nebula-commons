@@ -4,11 +4,9 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
-
 	<artifactId>nebula-commons</artifactId>
 	<groupId>nebula</groupId>
-	<version>1.0-SNAPSHOT</version>
-
+	<version>${nebula.version}</version>
 	<name>nebula-commons</name>
 	<description>commons</description>
 
@@ -16,6 +14,13 @@
 		<!-- Startup class -->
 		<jacoco.version>0.7.5.201505241946</jacoco.version>
 		<junit.version>4.12</junit.version>
+		<nebula.version>0.1.1-SNAPSHOT</nebula.version>
+		<slf4j.version>1.7.25</slf4j.version>
+		<mockito.version>1.10.19</mockito.version>
+		<asm.version>5.2</asm.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.test.skip>false</maven.test.skip>
+		<compiler.compilerArgument></compiler.compilerArgument>
 	</properties>
 
 	<dependencies>
@@ -26,20 +31,25 @@
 			<artifactId>slf4j-api</artifactId>
 			<version>1.7.25</version>
 		</dependency>
-
 		<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
-			<version>1.7.25</version>
+			<version>${slf4j.version}</version>
 			<scope>test</scope>
 		</dependency>
-
+		<!-- test -->
 		<!-- https://mvnrepository.com/artifact/junit/junit -->
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>${mockito.version}</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -48,12 +58,6 @@
 			<groupId>net.sf.trove4j</groupId>
 			<artifactId>trove4j</artifactId>
 			<version>3.0.3</version>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/net.jpountz.lz4/lz4 -->
-		<dependency>
-			<groupId>net.jpountz.lz4</groupId>
-			<artifactId>lz4</artifactId>
-			<version>1.3.0</version>
 		</dependency>
 	</dependencies>
 
@@ -66,9 +70,10 @@
 				<configuration>
 					<skipMain>false</skipMain>
 					<skip>false</skip>
-					<encoding>UTF-8</encoding>
+					<encoding>${project.build.sourceEncoding}</encoding>
 					<source>1.8</source>
 					<target>1.8</target>
+					<compilerArgument>${compiler.compilerArgument}</compilerArgument>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -110,18 +115,16 @@
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>
-			<!-- <plugin> <groupId>org.apache.maven.plugins</groupId> <artifactId>maven-project-info-reports-plugin</artifactId> 
-				<version>2.8</version> </plugin> <plugin> <groupId>org.apache.maven.plugins</groupId> 
-				<artifactId>maven-site-plugin</artifactId> <version>3.4</version> <configuration> 
-				<locales>en,fr</locales> </configuration> </plugin> <plugin> <groupId>org.apache.maven.plugins</groupId> 
-				<artifactId>maven-surefire-report-plugin</artifactId> <version>2.22.0</version> 
-				</plugin> -->
-			<!-- Build fat jar -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>deploy</id>
+			<properties>
+				<compiler.compilerArgument>-g:none</compiler.compilerArgument>
+			</properties>
+		</profile>
+	</profiles>
 
 </project>
