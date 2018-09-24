@@ -26,13 +26,14 @@ import nebula.commons.text.StringUtil;
 
 /**
  * Iterator that accumulates transformations and filters keeping its instance.
- * So JBIterable#filter() and JBIterable#transform() preserve the underlying iterator API.
+ * So JBIterable#filter() and JBIterable#transform() preserve the underlying
+ * iterator API.
  *
  * <h3>Supported contracts:</h3>
  * <ul>
- *   <li>Classic iterator: hasNext() / next()</li>
- *   <li>Cursor: advance() / current()</li>
- *   <li>One-time iterable: cursor()</li>
+ * <li>Classic iterator: hasNext() / next()</li>
+ * <li>Cursor: advance() / current()</li>
+ * <li>One-time iterable: cursor()</li>
  * </ul>
  *
  * Implementors should provide nextImpl() method which can call stop()/skip().
@@ -43,7 +44,8 @@ import nebula.commons.text.StringUtil;
  *
  * @author gregsh
  *
- * @noinspection unchecked, TypeParameterHidesVisibleType, AssignmentToForLoopParameter
+ * @noinspection unchecked, TypeParameterHidesVisibleType,
+ *               AssignmentToForLoopParameter
  */
 public abstract class JBIterator<E> implements Iterator<E> {
 
@@ -52,178 +54,184 @@ public abstract class JBIterator<E> implements Iterator<E> {
 //    return JBIterable.generate(iterator, Functions.<E>id()).intercept(CURSOR_NEXT);
 //  }
 
-  @NotNull
-  public static <E> JBIterator<E> from(@NotNull final Iterator<? extends E> it) {
-    return it instanceof JBIterator ? (JBIterator<E>)it : wrap(it);
-  }
+	@SuppressWarnings("unchecked")
+	@NotNull
+	public static <E> JBIterator<E> from(@NotNull final Iterator<? extends E> it) {
+		return it instanceof JBIterator ? (JBIterator<E>) it : wrap(it);
+	}
 
-  @NotNull
-  static <E> JBIterator<E> wrap(@NotNull final Iterator<? extends E> it) {
-    return new JBIterator<E>() {
-      @Override
-      protected E nextImpl() {
-        return it.hasNext() ? it.next() : stop();
-      }
-    };
-  }
+	@NotNull
+	static <E> JBIterator<E> wrap(@NotNull final Iterator<? extends E> it) {
+		return new JBIterator<E>() {
+			@Override
+			protected E nextImpl() {
+				return it.hasNext() ? it.next() : stop();
+			}
+		};
+	}
 
-  private enum Do {INIT, STOP, SKIP}
-  private Object myCurrent = Do.INIT;
-  private Object myNext = Do.INIT;
+	private enum Do {
+		INIT, STOP, SKIP
+	}
 
-  private Op myFirstOp = new NextOp();
-  private Op myLastOp = myFirstOp;
+	private Object myCurrent = Do.INIT;
+	private Object myNext = Do.INIT;
 
-  /**
-   * Returns the next element if any; otherwise calls stop() or skip().
-   */
-  protected abstract E nextImpl();
+	@SuppressWarnings("rawtypes")
+	private Op myFirstOp = new NextOp();
+	@SuppressWarnings("rawtypes")
+	private Op myLastOp = myFirstOp;
 
-  /**
-   * Called right after the new current value is set.
-   */
-  protected void currentChanged() { }
+	/**
+	 * Returns the next element if any; otherwise calls stop() or skip().
+	 */
+	protected abstract E nextImpl();
 
-  /**
-   * Notifies the iterator that there's no more elements.
-   */
-  @Nullable
-  protected final E stop() {
-    myNext = Do.STOP;
-    return null;
-  }
+	/**
+	 * Called right after the new current value is set.
+	 */
+	protected void currentChanged() {
+	}
 
-  /**
-   * Notifies the iterator to skip and re-invoke nextImpl().
-   */
-  @Nullable
-  protected final E skip() {
-    myNext = Do.SKIP;
-    return null;
-  }
+	/**
+	 * Notifies the iterator that there's no more elements.
+	 */
+	@Nullable
+	protected final E stop() {
+		myNext = Do.STOP;
+		return null;
+	}
 
-  @Override
-  public final boolean hasNext() {
-    peekNext();
-    return myNext != Do.STOP;
-  }
+	/**
+	 * Notifies the iterator to skip and re-invoke nextImpl().
+	 */
+	@Nullable
+	protected final E skip() {
+		myNext = Do.SKIP;
+		return null;
+	}
 
-  @Override
-  public final E next() {
-    advance();
-    return current();
-  }
+	@Override
+	public final boolean hasNext() {
+		peekNext();
+		return myNext != Do.STOP;
+	}
 
-  /**
-   * Proceeds to the next element if any and returns true; otherwise false.
-   */
-  public final boolean advance() {
-    myCurrent = Do.INIT;
-    peekNext();
-    if (myNext == Do.STOP) return false;
-    myCurrent = myNext;
-    myNext = Do.INIT;
-    if (myFirstOp instanceof JBIterator.CursorOp) {
-      ((CursorOp)myFirstOp).advance(myCurrent);
-    }
-    currentChanged();
-    return true;
-  }
+	@Override
+	public final E next() {
+		advance();
+		return current();
+	}
 
-  /**
-   * Returns the current element if any; otherwise throws exception.
-   */
-  @SuppressWarnings("unchecked")
-public final E current() {
-    if (myCurrent == Do.INIT) {
-      throw new NoSuchElementException();
-    }
-    return (E)myCurrent;
-  }
+	/**
+	 * Proceeds to the next element if any and returns true; otherwise false.
+	 */
+	@SuppressWarnings("unchecked")
+	public final boolean advance() {
+		myCurrent = Do.INIT;
+		peekNext();
+		if (myNext == Do.STOP) return false;
+		myCurrent = myNext;
+		myNext = Do.INIT;
+		if (myFirstOp instanceof JBIterator.CursorOp) {
+			((CursorOp) myFirstOp).advance(myCurrent);
+		}
+		currentChanged();
+		return true;
+	}
 
-  private void peekNext() {
-    if (myNext != Do.INIT) return;
-    Object o = Do.INIT;
-    for (Op op = myFirstOp; op != null; op = op == null ? myFirstOp : op.nextOp) {
-      o = op.apply(op.impl == null ? nextImpl() : o);
-      if (myNext == Do.STOP) return;
-      if (myNext == Do.SKIP) {
-        o = myNext = Do.INIT;
-        if (op.impl == null) {
-          // rollback all prepended takeWhile conditions if nextImpl() votes SKIP
-          for (Op op2 = myFirstOp; op2.impl instanceof CountDown; op2 = op2.nextOp) {
-            ((CountDown)op2.impl).cur ++;
-          }
-        }
-        op = null;
-      }
-    }
-    myNext = o;
-  }
+	/**
+	 * Returns the current element if any; otherwise throws exception.
+	 */
+	@SuppressWarnings("unchecked")
+	public final E current() {
+		if (myCurrent == Do.INIT) {
+			throw new NoSuchElementException();
+		}
+		return (E) myCurrent;
+	}
 
-  @NotNull
-  public final <T> JBIterator<T> map(@NotNull Function<? super E, T> function) {
-    return addOp(true, new TransformOp<E, T>(function));
-  }
+	@SuppressWarnings("rawtypes")
+	private void peekNext() {
+		if (myNext != Do.INIT) return;
+		Object o = Do.INIT;
+		for (Op op = myFirstOp; op != null; op = op == null ? myFirstOp : op.nextOp) {
+			o = op.apply(op.impl == null ? nextImpl() : o);
+			if (myNext == Do.STOP) return;
+			if (myNext == Do.SKIP) {
+				o = myNext = Do.INIT;
+				if (op.impl == null) {
+					// rollback all prepended takeWhile conditions if nextImpl() votes SKIP
+					for (Op op2 = myFirstOp; op2.impl instanceof CountDown; op2 = op2.nextOp) {
+						((CountDown) op2.impl).cur++;
+					}
+				}
+				op = null;
+			}
+		}
+		myNext = o;
+	}
 
-  @NotNull
-  public final JBIterator<E> filter(@NotNull Condition<? super E> condition) {
-    return addOp(true, new FilterOp<E>(condition));
-  }
+	@NotNull
+	public final <T> JBIterator<T> map(@NotNull Function<? super E, T> function) {
+		return addOp(true, new TransformOp<E, T>(function));
+	}
 
-  @NotNull
-  public final JBIterator<E> take(int count) {
-    // add first so that the underlying iterator stay on 'count' position
-    return addOp(!(myLastOp instanceof NextOp), new WhileOp<E>(new CountDown<E>(count)));
-  }
+	@NotNull
+	public final JBIterator<E> filter(@NotNull Condition<? super E> condition) {
+		return addOp(true, new FilterOp<E>(condition));
+	}
 
-  @NotNull
-  public final JBIterator<E> takeWhile(@NotNull Condition<? super E> condition) {
-    return addOp(true, new WhileOp<E>(condition));
-  }
+	@NotNull
+	public final JBIterator<E> take(int count) {
+		// add first so that the underlying iterator stay on 'count' position
+		return addOp(!(myLastOp instanceof NextOp), new WhileOp<E>(new CountDown<E>(count)));
+	}
 
-  @NotNull
-  public final JBIterator<E> skip(int count) {
-    return skipWhile(new CountDown<E>(count));
-  }
+	@NotNull
+	public final JBIterator<E> takeWhile(@NotNull Condition<? super E> condition) {
+		return addOp(true, new WhileOp<E>(condition));
+	}
 
-  @NotNull
-  public final JBIterator<E> skipWhile(@NotNull final Condition<? super E> condition) {
-    return addOp(true, new SkipOp<E>(condition));
-  }
+	@NotNull
+	public final JBIterator<E> skip(int count) {
+		return skipWhile(new CountDown<E>(count));
+	}
 
-  @SuppressWarnings("unchecked")
-@NotNull
-  private <T> T addOp(boolean last, @NotNull Op op) {
-    if (op.impl == null) {
-      myFirstOp = myLastOp = op;
-    }
-    else if (last) {
-      myLastOp.nextOp = op;
-      myLastOp = myLastOp.nextOp;
-    }
-    else {
-      op.nextOp = myFirstOp;
-      myFirstOp = op;
-    }
-    return (T)this;
-  }
+	@NotNull
+	public final JBIterator<E> skipWhile(@NotNull final Condition<? super E> condition) {
+		return addOp(true, new SkipOp<E>(condition));
+	}
 
-  @Override
-  public final void remove() {
-    throw new UnsupportedOperationException();
-  }
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@NotNull
+	private <T> T addOp(boolean last, @NotNull Op op) {
+		if (op.impl == null) {
+			myFirstOp = myLastOp = op;
+		} else if (last) {
+			myLastOp.nextOp = op;
+			myLastOp = myLastOp.nextOp;
+		} else {
+			op.nextOp = myFirstOp;
+			myFirstOp = op;
+		}
+		return (T) this;
+	}
 
+	@Override
+	public final void remove() {
+		throw new UnsupportedOperationException();
+	}
 
-  @NotNull
-  static String toShortString(@NotNull Object o) {
-    String name = o.getClass().getName();
-    int idx = name.lastIndexOf('$');
-    if (idx > 0 && idx < name.length() && StringUtil.isJavaIdentifierStart(name.charAt(idx + 1))) {
-      return name.substring(idx + 1);
-    }
-    return name.substring(name.lastIndexOf('.') + 1);
-  }
+	@NotNull
+	static String toShortString(@NotNull Object o) {
+		String name = o.getClass().getName();
+		int idx = name.lastIndexOf('$');
+		if (idx > 0 && idx < name.length() && StringUtil.isJavaIdentifierStart(name.charAt(idx + 1))) {
+			return name.substring(idx + 1);
+		}
+		return name.substring(name.lastIndexOf('.') + 1);
+	}
 
 //  private static final Function CURSOR_NEXT = new Function<JBIterator<?>>() {
 //    @Override
@@ -232,119 +240,123 @@ public final E current() {
 //    }
 //  };
 
-  private static class Op<T> {
-    final T impl;
-    @SuppressWarnings("rawtypes")
-	Op nextOp;
+	private static class Op<T> {
+		final T impl;
+		@SuppressWarnings("rawtypes")
+		Op nextOp;
 
-    Op(T impl) {
-      this.impl = impl;
-    }
+		Op(T impl) {
+			this.impl = impl;
+		}
 
-    Object apply(Object o) {
-      throw new UnsupportedOperationException();
-    }
+		Object apply(Object o) {
+			throw new UnsupportedOperationException();
+		}
 
-    @Override
-    public String toString() {
-      return toShortString(impl == null ? this : impl);
-    }
-  }
+		@Override
+		public String toString() {
+			return toShortString(impl == null ? this : impl);
+		}
+	}
 
-  private static class CountDown<A> implements Condition<A> {
-    int cur;
+	private static class CountDown<A> implements Condition<A> {
+		int cur;
 
-    CountDown(int count) {
-      cur = count;
-    }
+		CountDown(int count) {
+			cur = count;
+		}
 
-    @Override
-    public boolean value(A a) {
-      return cur > 0 && cur-- != 0;
-    }
-  }
+		@Override
+		public boolean value(A a) {
+			return cur > 0 && cur-- != 0;
+		}
+	}
 
-  private static class TransformOp<E, T> extends Op<Function<? super E, T>> {
-    TransformOp(Function<? super E, T> function) {
-      super(function);
-    }
+	private static class TransformOp<E, T> extends Op<Function<? super E, T>> {
+		TransformOp(Function<? super E, T> function) {
+			super(function);
+		}
 
-    @Override
-    Object apply(Object o) {
-      return impl.apply((E)o);
-    }
-  }
+		@SuppressWarnings("unchecked")
+		@Override
+		Object apply(Object o) {
+			return impl.apply((E) o);
+		}
+	}
 
-  @SuppressWarnings("hiding")
-private class FilterOp<E> extends Op<Condition<? super E>> {
-    FilterOp(Condition<? super E> condition) {
-      super(condition);
-    }
+	@SuppressWarnings("hiding")
+	private class FilterOp<E> extends Op<Condition<? super E>> {
+		FilterOp(Condition<? super E> condition) {
+			super(condition);
+		}
 
-    @SuppressWarnings("unchecked")
-	@Override
-    Object apply(Object o) {
-      return impl.value((E)o) ? o : skip();
-    }
-  }
+		@SuppressWarnings("unchecked")
+		@Override
+		Object apply(Object o) {
+			return impl.value((E) o) ? o : skip();
+		}
+	}
 
-  @SuppressWarnings("hiding")
-private class WhileOp<E> extends Op<Condition<? super E>> {
+	@SuppressWarnings("hiding")
+	private class WhileOp<E> extends Op<Condition<? super E>> {
 
-    WhileOp(Condition<? super E> condition) {
-      super(condition);
-    }
-    @SuppressWarnings("unchecked")
-	@Override
-    Object apply(Object o) {
-      return impl.value((E)o) ? o : stop();
-    }
-  }
+		WhileOp(Condition<? super E> condition) {
+			super(condition);
+		}
 
-  private class SkipOp<E> extends Op<Condition<? super E>> {
-    boolean active = true;
+		@SuppressWarnings("unchecked")
+		@Override
+		Object apply(Object o) {
+			return impl.value((E) o) ? o : stop();
+		}
+	}
 
-    SkipOp(Condition<? super E> condition) {
-      super(condition);
-    }
+	@SuppressWarnings("hiding")
+	private class SkipOp<E> extends Op<Condition<? super E>> {
+		boolean active = true;
 
-    @SuppressWarnings("unchecked")
-	@Override
-    Object apply(Object o) {
-      if (active && impl.value((E)o)) return skip();
-      active = false;
-      return o;
-    }
-  }
+		SkipOp(Condition<? super E> condition) {
+			super(condition);
+		}
 
-  private static class NextOp extends Op<Void> {
-    NextOp() {
-      super(null);
-    }
+		@SuppressWarnings("unchecked")
+		@Override
+		Object apply(Object o) {
+			if (active && impl.value((E) o)) return skip();
+			active = false;
+			return o;
+		}
+	}
 
-    @Override
-    Object apply(Object o) {
-      return o;
-    }
-  }
+	private static class NextOp extends Op<Void> {
+		NextOp() {
+			super(null);
+		}
 
-  private class CursorOp extends Op<Void> {
-    boolean advanced;
+		@Override
+		Object apply(Object o) {
+			return o;
+		}
+	}
 
-    CursorOp() {
-      super(null);
-    }
+	private class CursorOp extends Op<Void> {
+		boolean advanced;
 
-    @Override
-    Object apply(Object o) {
-      JBIterator<?> it = (JBIterator<?>)o;
-      return ((advanced = nextOp != null) ? it.advance() : it.hasNext()) ? it : stop();
-    }
+		CursorOp() {
+			super(null);
+		}
 
-    void advance(Object o) {
-      if (advanced || !(o instanceof JBIterator)) return;
-      ((JBIterator)o).advance();
-      advanced = true;
-    }
-  }
+		@Override
+		Object apply(Object o) {
+			JBIterator<?> it = (JBIterator<?>) o;
+			return ((advanced = nextOp != null) ? it.advance() : it.hasNext()) ? it : stop();
+		}
+
+		@SuppressWarnings("rawtypes")
+		void advance(Object o) {
+			if (advanced || !(o instanceof JBIterator)) return;
+			((JBIterator) o).advance();
+			advanced = true;
+		}
+	}
 }
